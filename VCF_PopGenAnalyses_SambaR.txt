@@ -1,0 +1,76 @@
+	# ANALYSES IN SAMBAR
+		
+	# LOAD SNP-DATA:
+	setwd("brownbear_NorthAmerica112/")
+	source("SAMBAR_v1.10.txt")
+	getpackages()
+	mypopnames		<- c("ABCa","ABCbc","ABCcoastN","ABCcoastS","Alaska","AlaskaSE1","AlaskaSE2","Aleutian","Black","Europe","HudsonBay","Kamtchatka","Kodiak","Magadan","Nunavut","polar","WestcoastC","WestcoastN","WestcoastS","Yukon") 
+	mycolours		<- c("mediumblue","blue4","thistle1","plum1","steelblue3","steelblue4","plum3","deepskyblue","black","darkred","darkorchid4","cyan2","lightskyblue3","aquamarine2","darkorchid3","cornsilk3","violetred","violetred1","deeppink3","mediumpurple")
+	mypoporder		<- c("Europe","Magadan","Kamtchatka","Aleutian","Kodiak","Alaska","AlaskaSE1","ABCa","ABCbc","HudsonBay","Nunavut","Yukon","AlaskaSE2","ABCcoastN","ABCcoastS","WestcoastN","WestcoastC","WestcoastS","polar","Black") 
+	importdata(inputprefix="NorthAmericamodern112.mysnps.thinned.50000",samplefile="Brown184_popfile.txt",sumstatsfile=FALSE,depthfile=TRUE,legend_cex=2,colourvector=mycolours,pop_order=mypoporder)
+	filterdata(indmiss=0.2,snpmiss=0.2,dohefilter=TRUE)	
+	backupdata("brownNA_auto",overwrite=TRUE)
+	#
+	# CREATE GEOGRAPHIC MAP:
+	excludepop(c("polar","Kamtchatka","Europe","Magadan","Black"))
+	plotlocations(mycex=0.5,mydeviation=0.25,dolabels=TRUE,export="pdf",exportname="NorthAmerica_labels")
+	plotlocations(mycex=1.5,mydeviation=0.25,dolabels=FALSE,export="pdf",exportname="NorthAmerica")
+	#
+	# F3-ANALYSES:
+	excludepop()
+	setwd(mysambar$demographydir)
+	inferdemography(do_LEA=FALSE,do_Dstats=FALSE,do_f3=TRUE,f3_triplets=NULL,f3_preparefiles=TRUE)
+	system("C:/path/to/plink --file metapop.retainedinds.filter.number --chr-set 80 --allow-extra-chr --make-bed --recode A --out metapop.retainedinds.filter.number")
+	inferdemography(do_LEA=FALSE,do_Dstats=FALSE,do_f3=TRUE,f3_triplets=NULL,f3_preparefiles=FALSE)
+	#
+	# TREEMIX
+	excludepop(c("Alaska","Nunavut","Yukon","WestcoastN","WestcoastC","ABCcoastS","ABCcoastN","AlaskaSE1","AlaskaSE2","Black","Aleutian","ABCa"))
+	setwd(mysambar$demographydir)
+	exporttreemix(snpsfilter=snps$filter,exportname="Treemixinput.snpsfilter.txt")
+	# in Unix environment:
+	# gzip Treemixinput.snpsfilter.txt
+	# for k in {0..8}; do /home/mdejong/software/Treemix/treemix-1.13/bin/treemix -i Treemixinput.snpsfilter.txt.gz -m ${k} -root SpainSP1 -o Treemixout.${k} &; done	
+	# place all output files in Demography directory and generate plots:
+	for(k in c(0:8))
+		{
+		plottreemix(prefix=paste("Treemixout",k,sep="."),export="pdf",myxmin=0,plotname=paste("Treemixoutput",k,sep="."),xmargin=0.05)
+		}
+	#
+	# LEA ADMIXTURE PLOT:
+	excludepop(c("polar","Black"))
+	inds$filter[inds$name%in%c("Alaska1","Kodiak3","Kodiak4","Kodiak5","Kodiak6")]<-FALSE
+	runLEA(mindemes=2,maxdemes=4,poporder=mysambar$poporder)
+	LEAstructureplot(mymatrixlist=mysambar$leaqmatrixlist,poporder=mysambar$poporder,mindemes=2,maxdemes=4,export="pdf",borderlwd=0.5,bordercol="white",dolabelcol=TRUE,addindname=TRUE,shortpop_nrchars=15,addindnr=FALSE,axiscex=0.85,labelcex=1.5,heightfactor = 1)
+ 	#
+	####
+	# SUBSEQUENT ANALYSES ARE PERFORMED USING OUTPUT OF VCF_CALCDIST.SH SCRIPT
+	# PHYLOGENY AND DISTANCE MATRIX:
+	setwd("brownbear_NorthAmerica112/calcdxy")
+	add2inds2(myfile="allvcfdist.txt",miss_filter=inds2$d_miss<=1)
+	mypoporder3	<- c("Europe","Magadan","Kamtchatka","Kodiak","Aleutian","Alaska","AlaskaSE1","HudsonBay","Nunavut","ABCbc","ABCa","Yukon","AlaskaSE2","ABCcoastN","ABCcoastS","WestcoastN","WestcoastC","WestcoastS","polar","Black") 
+	reorderpop(mypoporder3)
+	excludepop(c("polar","Black"))
+	mymat		<- df2mat(mydf=inds2,myinds=inds$nr,indnames=inds$name,mypops=inds$pop,myscore="d3",doheatmap=TRUE)
+	mymat2		<- as.dist(t(mymat[inds$filter,inds$filter]/100))
+	plotindmatrix(n_bins=4,add_lab=TRUE,bincol1="red",bincol2="blue",midbincol="white",print_name=TRUE,ind_matrix=mymat,export_name="Rawdistance_withvalues",plottitle="    Autosomal genetic distance (%)",title_cex=2.5,title_line=0,show_values=TRUE,notecex=0.2,noteround=3,export="pdf",my_Breaks=c(0,0.2,0.207,0.228,1),legendcex=1)
+	plotindmatrix(n_bins=4,add_lab=FALSE,bincol1="red",bincol2="blue",midbincol="white",print_name=TRUE,ind_matrix=mymat,export_name="Rawdistance",plottitle="    Autosomal genetic distance (%)",title_cex=2.5,title_line=0,show_values=FALSE,notecex=0.2,noteround=3,export="pdf",my_Breaks=c(0,0.2,0.207,0.228,1),legendcex=2,5)
+	getindtree(do_analysis=TRUE,mydistance="pi",mymethod="bionj",inputdistmat=mymat2,mytype="unrooted",nshorten=0,labelangle="axial",export="pdf",dopathlength=TRUE,fullplotname=FALSE,calc_parsimony=FALSE,calc_likelihood=FALSE,plottitle="Autosomes",tree_angle=30,titlecex=2.5,labelcex=1.5,pathlength_domean=TRUE,pathlengthbreaks=c(-0.2,-0.04,-0.02,-0.015,0.015,0.02,0.04,0.2))
+	#
+	# PCOA:
+	excludepop(c("polar","Europe","Magadan","Black"))
+	mymat3		<- as.dist(t(mymat[inds$filter,inds$filter]/100))
+	ape_pcoa(method="pi",exportname="NAbears_withKamtchatka",inputdistmat=mymat3,addlegend=FALSE,legendcex=1.75,do_mirror=c(TRUE,FALSE),axis1=2,axis2=1,export="pdf",symbolsize=4,use_current_dir=TRUE,addtitle="Autosomes")
+	ape_pcoa(method="pi",exportname="NAbears_withKamtchatka",inputdistmat=mymat3,addlegend=FALSE,legendcex=1.75,do_mirror=c(FALSE,FALSE),axis1=1,axis2=3,export="pdf",symbolsize=4,use_current_dir=TRUE,addtitle="Autosomes")
+	#
+	excludepop(c("polar","Kamtchatka","Europe","Magadan","Black","Kodiak","Aleutian","Alaska","AlaskaSE1"))
+	mymat4		<- as.dist(t(mymat[inds$filter,inds$filter]))
+	ape_pcoa(method="pi",exportname="NAbears_withoutAlaska",inputdistmat=mymat4,addlegend=FALSE,legendcex=1.75,do_mirror=c(TRUE,FALSE),axis1=2,axis2=1,export="pdf",symbolsize=4,use_current_dir=TRUE,addtitle="Autosomes")
+	plotindmatrix(n_bins=4,add_lab=TRUE,bincol1="red",bincol2="blue",midbincol="white",print_name=TRUE,ind_matrix=mymat4,export_name="Rawdistance_withvalues_noAlaska",plottitle="    Autosomal genetic distance (%)",title_cex=2.5,title_line=0,show_values=TRUE,notecex=0.2,noteround=3,export="pdf",my_Breaks=c(0,0.2,0.207,0.228,1),legendcex=1)
+	#
+	# MANTEL PLOT:
+	excludepop(c("polar","Kamtchatka","Europe","Magadan","Black"))
+	popscatter(export="pdf",plottitle="North America",score1="geodist",score2="dxy",legendpos="bottomright",legendcex=1.25,ylabel="Dxy (%)",xlabel="Distance (100 km)",addregression=TRUE,legend2pos="topleft")
+
+
+	
+	
