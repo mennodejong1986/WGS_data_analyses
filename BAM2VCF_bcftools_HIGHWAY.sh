@@ -237,12 +237,12 @@ if [[ "$runpipeline" = TRUE ]]
 	echo ${mybedfile}
 	if [[ "$setploidy" = TRUE ]]
 		then
-		${BCFTOOLS} mpileup -A --max-depth $maxsampledepth --min-MQ 20 -min-BQ 13 -C50 -a "DP,AD" -R ${mybedfile} --output-type u -f ${REFERENCE} --bam-list ${BAMFILES} | 
+		${BCFTOOLS} mpileup -A --max-depth $maxsampledepth --min-MQ 20 -min-BQ 15 -C50 -a "DP,AD" -R ${mybedfile} --output-type u -f ${REFERENCE} --bam-list ${BAMFILES} | 
 		${BCFTOOLS} call -a GQ -m --group-samples $POPFILE --output-type z --ploidy-file $PLOIDYFILE --samples-file $SEXFILE | 					# this line is affected by setploidy flag 
 		${BCFTOOLS} norm --check-ref w --fasta-ref ${REFERENCE} -O z |
 		${BCFTOOLS} filter --threads 1 --set-GTs . -e "FMT/DP<${maskdepth}" -O z -o masked_${PREFIX}.${mybedfile}.vcf.gz &
 		else
-		${BCFTOOLS} mpileup -A --max-depth $maxsampledepth --min-MQ 20 -min-BQ 13 -C50 -a "DP,AD" -R ${mybedfile} --output-type u -f ${REFERENCE} --bam-list ${BAMFILES} | 
+		${BCFTOOLS} mpileup -A --max-depth $maxsampledepth --min-MQ 20 -min-BQ 15 -C50 -a "DP,AD" -R ${mybedfile} --output-type u -f ${REFERENCE} --bam-list ${BAMFILES} | 
 		${BCFTOOLS} call -a GQ -m --group-samples $POPFILE --output-type z --ploidy ${PLOIDY} | 												# this line is affected by setploidy flag
 		${BCFTOOLS} norm --check-ref w --fasta-ref ${REFERENCE} -O z |
 		${BCFTOOLS} filter --threads 1 --set-GTs . -e "FMT/DP<${maskdepth}" -O z -o masked_${PREFIX}.${mybedfile}.vcf.gz &
