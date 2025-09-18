@@ -12,18 +12,18 @@ The file 'GenotypeCalling.routemap.pdf' contains a schematic overview of the ove
 
 # Default filter settings
 fastq-files:  
-minimum base quality: 15    fastp (FASTQ_runfastp.sh)  
+minimum base quality: 15;    *fastp --qualified_quality_phred 15* 
   
 bam-files:  
-mimimum mapping quality: 20     samtools view -q 20 (FASTQ2BAM_bwa_highway.sh)  
-minimum alignment score: 100    samtools view -e '[AS]>=100' (FASTQ2BAM_bwa_highway.sh)  
-properly pairs reads only       samtools view -f 0x2 (FASTQ2BAM_bwa_highway.sh)  
+mimimum mapping quality: 20;     *samtools view -q 20*  
+minimum alignment score: 100;    *samtools view -e '[AS]>=100'*  
+properly pairs reads only;       *samtools view -f 0x2*  
   
 vcf-files:  
-min. depth per genotype: 5      bcftools filter --set-GTs . -e "FMT/DP<5" (BAM2VCF_bcftools_HIGHWAY.sh)  
-min. depth per site:            customised value based on observed depth distribution (see BAM2VCF_plotdepth_inR.txt)  
-max. depth per site:            idem  
-no indels                       bcftools view --exclude-types indels  
+min. depth per genotype: 5;      *bcftools filter --set-GTs . -e "FMT/DP<5"*  
+min. depth per site: custom      *bcftools view -i "INFO/DP>=${mindepth}* 
+max. depth per site: custom      *bcftools view -i "INFO/DP<=${maxdepth}*
+no indels                        *bcftools view --exclude-types indels* 
   
 Because filters may introduce bias, the pipeline does not contain filters on site quality, minor allele frequency, missingness per site, or linkage disequilibrium.  
 
