@@ -168,6 +168,7 @@ fi
 
 if [[ "$indexbam" = TRUE ]]
 	then
+	# 24-03-2025: This step might actually not be needed. addRG-step also works on non-indexed bam-files.
 	echo "Indexing bam..."
 	for bn in $(cat allsamples.bn.txt)
 		do
@@ -183,6 +184,8 @@ if [[ "$addRG" = TRUE ]]
 	then
 	# uses up to 130% per sample, and 0.1% memory. So many samples can be run at the same time.
 	# Around 2-3 hours per sample
+	# This step could be skipped if the readgroups have been added already during the mapping step: 
+	# bwa mem -M -t 3 -R "@RG\tID:{$bn}\tSM:{$bn}\tPL:{platform}\tLB:{Library name}"
 	echo "Adding read groups..."
 	for bn in $(cat allsamples.bn.txt)
 		do

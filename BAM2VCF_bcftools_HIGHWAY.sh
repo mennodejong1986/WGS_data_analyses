@@ -80,9 +80,9 @@ PLINK=/home/mdejong/software/plinkv2020-09-21/plink                         # Pa
 
 # INPUT FILES
 #REFERENCE=/path/to/genome/referencegenome.fa		# Path to unzipped reference genome. Genome should be indexed with samtools faidx command (which is automatically done by 'createbed' step.
-REFERENCE=/home/mdejong/bearproject/refgenome/brownbear_chrom/ASM358476v1_HiC.fasta
-BAMFILES=mybamfiles.txt								# A txt file with (full path and) names of input bam files, one per line. Bam-files should already have been indexed with samtools index command.
-POPFILE=mygroupfile.txt								# Required for callgenotypes step; tab separated txt-file with two columns (no header): sample name and population name. 
+REFERENCE=/home/mdejong/bearproject/refgenome/brownbear_chrom/ASM358476v1_HiC.fasta # CUSTOMISE #
+BAMFILES=mybamfiles.txt								# CUSTOMISE # A txt file with (full path and) names of input bam files, one per line. Bam-files should already have been indexed with samtools index command.
+POPFILE=mygroupfile.txt								# CUSTOMISE # Required for callgenotypes step; tab separated txt-file with two columns (no header): sample name and population name. 
 													# Note: if you run the add read group command, this should not correspond to bam-file name, but to SM-tag in bam-file (specified with addreadgroup-command). 
 													# For example: 'sample1.sorted.bam' could become simply 'sample1' (check the SM tag).
 													# If the names do not correspond, you run into the ERROR: 'Could not parse the file, no matching samples found:'
@@ -97,11 +97,11 @@ POPFILE=mygroupfile.txt								# Required for callgenotypes step; tab separated 
 													# Liu et al. 2022, Comparison of seven SNP calling pipelines for the next-generation sequencing data of chickens
 													# Still, I always use option 1, and while this might result in a higher overall genotyping error rate, at least I need experience any bias: the results always make sense.			
 # GENERAL SETTINGS
-PREFIX=BearSpecies		# Desired prefix of output files. Should NOT contain a period (.), otherwise the sorting of the subset files will be corrupted. 
+PREFIX=Camelids					# Desired prefix of output files. Should NOT contain a period (.), otherwise the sorting of the subset files will be corrupted. 
 PLOIDY=2                        # Only used if setploidy is set to FALSE (default). Set to 1 for mt-DNA data and Y-chromosomal data, or leave at 2 (default) for autosomal data (assuming diploid organisms).
 setploidy=FALSE                 # Only set to true if you want to define ploidy level dependent on gender of sample (e.g. for Y-chrom or X-chrom). If true, define ploidyfile and samplefile:
-PLOIDYFILE=myploidyfile.txt	# Needed if setploidy=TRUE for callgenotypes step; tab-separated txt-file with 5 columns: chrom, start, end, gender, ploidy
-SEXFILE=all153sexinfo.txt   	# Needed if setploidy=TRUE for callgenotypes step; tab-separated txt-file with 2 columns (no header): sample name and gender (M or F)
+PLOIDYFILE=myploidyfile.txt		# Needed if setploidy=TRUE for callgenotypes step; tab-separated txt-file with 5 columns: chrom, start, end, gender, ploidy
+SEXFILE=allsexinfo.txt   		# Needed if setploidy=TRUE for callgenotypes step; tab-separated txt-file with 2 columns (no header): sample name and gender (M or F)
 
 # CONTROL PANEL
 # from here onwards, traffic light control panel to run analyses step by step
@@ -110,10 +110,10 @@ SEXFILE=all153sexinfo.txt   	# Needed if setploidy=TRUE for callgenotypes step; 
 
 # CREATE BED-FILES:
 createbed=FALSE			## Divide genome in subsets
-NRSETS=6				# Number of subdivisions (this is basically the number of commands you want to run parallel). 
+NRSETS=30				# Number of subdivisions (this is basically the number of commands you want to run parallel). 
 						# Note: sometimes when running 'createbed' you might get the error: Error: mybed.txt: No such file or directory. In that case choose another (lower?) value for NRSETS and try again.
 						# If possible (meaning: in case you have identified them), remove the scaffolds of the X-chrom and Y-chrom and run the analyses on these scaffolds separately, with different ploidy settings.
-myregion=mybed2.txt		# After createbed step, specify here the name of a non-empty bed-file. This will be used in subsequent steps to check whether all expected files are present.
+myregion=mybed2.txt		# CUSTOMISE # After createbed step, specify here the name of a non-empty bed-file. This will be used in subsequent steps to check whether all expected files are present.
 
 # GENOTYPE CALLING:
 runpipeline=FALSE		## Main step, runs all at once: bcftools mpileup, norm , call and filter (mask). Use 'maskdepth' and 'maxsampledepth' to specify masking threshold and maximum number of reads to be considered per sample.  
@@ -123,16 +123,16 @@ combinevcf=FALSE		## Optional, and never needed, as globalfilter-step can also r
 
 # DEPTH CALCULATIONS:
 calcdepth=FALSE			## Calculate distribution of depths across sites for a subset of genome (use 'bedfile' and 'thinbp2' to specify ). This depth information is needed to set the correct mindepth and maxdepth threshold when running the next step (globalfilter).
-depththinbp=1000		# Specify here the thinning factor.     
+depththinbp=10000		# Specify here the thinning factor.     
 
 # SITE FILTERING:
 globalfilter=FALSE		## Runs either on vcf file subsets or combined vcf file. Use the flags 'removeindels', 'min_alleles', 'mindepth' and 'maxdepth' to customize filter, in case of the latter two using information obtained from the calcdepth step (which can be visualised using BAM2VCF_plotdepth.R script.			
-mindepth=225			# rule of thumb: around 0.6x overall meandepth (e.g: if mean depth per sample is 10, and you have 100 samples, then: 10*100*0.6 = 600). However, use calcdepth output (visualised with BAM2VCF_plotdepth.R script) to customise.
-maxdepth=500			# rule of thumb: around 1.5x overall meandepth (e.g: if mean depth per sample is 10, and you have 100 samples, then: 10*100*1.5 = 1500). However, use calcdepth output (visualised with BAM2VCF_plotdepth.R script) to customise.
-min_alleles=32			# recommendation: in the range of 1.6 - 1.95 * nrsamples in case of diploid data, and in the range of 0.8 - 0.975 * nrsamples in case of haploid data. 
-site_quality=0			# Only use a site quality filter, if really needed. If certain samples do not behave (deviate from ultrametricity, set to 15, or max 20. Do NOT set higher than 20. This causes a disproportionate loss of monomorphic sites relative to polymorphic sites, and hence biases He, pi and Dxy-estimates. 
-removeindels=TRUE		# used by globalfilter step. By default set to TRUE.   
-combinevcf2=TRUE		## Optional, as next step can also run on vcf file subsets. Needed though as input for Darwindow ('PREFIX.globalfilter.vcf.gz').
+mindepth=80				# CUSTOMISE. Use BAM2VCF_calcdepth output and BAM2VCF_plotdepth.R scripts to determine the value. Expected value is around 0.6x overall meandepth (e.g: if mean depth per sample is 10, and you have 100 samples, then: 10*100*0.6 = 600). 
+maxdepth=250			# CUSTOMISE. Use BAM2VCF_calcdepth output and BAM2VCF_plotdepth.R scripts to determine the value. Expected value is around 1.5x overall meandepth (e.g: if mean depth per sample is 10, and you have 100 samples, then: 10*100*1.5 = 1500). 
+min_alleles=0			# recommendation: if possible keep to zero. Only a min_alleles threshold, if really needed. That is, if certain samples do not behave (deviate from ultrametricity), then set to approximately 1x nrsamples in the case of diploid data. 
+site_quality=0			# recommendation: if possible keep to zero. Only use a site quality filter, if really needed. If certain samples do not behave (deviate from ultrametricity, set to 15, or max 20. Do NOT set higher than 20. This causes a disproportionate loss of monomorphic sites relative to polymorphic sites, and hence biases He, pi and Dxy-estimates. 
+removeindels=TRUE		# this is an option of the globalfilter step. By default set to TRUE. All downstream analyses which I run, require that indels have been removed.    
+combinevcf2=FALSE		## Optional, as next step can also run on vcf file subsets. Needed though as input for Darwindow ('PREFIX.globalfilter.vcf.gz').
 
 # THIN DATA (OPTIONAL):
 thinallsites=FALSE		## Runs either on vcf file subsets or combined vcf file.
@@ -143,7 +143,7 @@ countsites=FALSE		## Count number of sites prior to variant selection
 # SNP SELECTION:
 selectvariants=FALSE	## Runs either on vcf file subsets or combined vcf file. Use the flags 'thinfactor' and 'biallelic' to specify input and output.
 thinfactor=0			# Which thinning factor was used to create the input files? If wanting to extract SNPs from unthinned data, then leave to 0. If from the thinned dataset, define same value as for thinallbp.
-biallelic=TRUE			# Select biallelic sites only? By default set to TRUE, to allow downstream analyses with SambaR. But, set to FALSE to generate input for VCF_calcdist.sh.
+biallelic=FALSE			# Select biallelic sites only? By default set to TRUE, to allow downstream analyses with SambaR. But, set to FALSE to generate input for VCF_calcdist.sh.
 combinevcf3=FALSE		## Combine subset vcf files with snps. But faster option is to run missfilter on subset vcf files and combine with combinevcf4 step. 
 						# Final output for mtDNA and Y-chromosomal data. Use this file as input for VCF_haploid2diploid.
 						# For autosomal data, use this file as input for VCF_calcdist calculations, as well as input for easySFS. (But make sure to know the total number of sites of the vcf-file prior to selecting variants.)	
@@ -162,7 +162,7 @@ thinsnpbp=50000			#
 FINALVCF=${PREFIX}.mysnps.thin0_50000.missfilter.vcf.gz				# Specify input vcf-file for file conversion and depth calculation. Either output of combinevcf3 or combinevcf4 or thinsnps (default)
 calcsnpdepth=FALSE		## Use FINALVCF flag to specify input.
 convert2ped=FALSE		## run PLINK to convert vcf to PED/MAP and subsequently to RAW/BIM
-convert2beagle=FALSE	## Note: not tested yet. Use FINALVCF to specify input.	
+convert2beagle=FALSE		## Note: not tested yet. Use FINALVCF to specify input.	
 
 #################################################################################
 # User shouldn't change anything from here.
