@@ -20,10 +20,10 @@ minimum alignment score: 100;    *samtools view -e '[AS]>=100'*
 properly pairs reads only;       *samtools view -f 0x2*  
   
 vcf-files:  
-min. depth per genotype: 5;      *bcftools filter --set-GTs . -e "FMT/DP<5"*  
-min. depth per site: custom      *bcftools view -i "INFO/DP>=${mindepth}* 
-max. depth per site: custom      *bcftools view -i "INFO/DP<=${maxdepth}*
-no indels                        *bcftools view --exclude-types indels* 
-  
+min. depth per genotype: 5;      *bcftools filter --set-GTs . -e "FMT/DP<5"*   
+min. depth per site: custom;     *bcftools view -i "INFO/DP>=${mindepth}*   
+max. depth per site: custom;     *bcftools view -i "INFO/DP<=${maxdepth}*  
+no indels;                       *bcftools view --exclude-types indels*  
+
 Because filters may introduce bias, the pipeline does not contain filters on site quality, minor allele frequency, missingness per site, or linkage disequilibrium.  
 
