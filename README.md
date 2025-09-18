@@ -12,7 +12,7 @@ The file 'GenotypeCalling.routemap.pdf' contains a schematic overview of the ove
 
 # Default filter settings
 fastq-files:  
-minimum base quality: 15        fastp (FASTQ_runfastp.sh)  
+minimum base quality: 15    fastp (FASTQ_runfastp.sh)  
   
 bam-files:  
 mimimum mapping quality: 20     samtools view -q 20 (FASTQ2BAM_bwa_highway.sh)  
