@@ -1,4 +1,4 @@
-#!/bin/bash
+ #!/bin/bash
 # This script is for rapid genotype calling/filtering using bcftools mpileup, call, norm, filter and view.
 # Input: bam files (indexed with samtools), one bam file per individual. 
 # Output: vcf file, containing genotype information for all individuals combined.
@@ -81,8 +81,8 @@ PLINK=/home/mdejong/software/plinkv2020-09-21/plink                         # Pa
 # INPUT FILES
 #REFERENCE=/path/to/genome/referencegenome.fa		# Path to unzipped reference genome. Genome should be indexed with samtools faidx command (which is automatically done by 'createbed' step.
 REFERENCE=/home/mdejong/bearproject/refgenome/brownbear_chrom/ASM358476v1_HiC.fasta # CUSTOMISE #
-BAMFILES=mybamfiles.txt								# CUSTOMISE # A txt file with (full path and) names of input bam files, one per line. Bam-files should already have been indexed with samtools index command.
-POPFILE=mygroupfile.txt								# CUSTOMISE # Required for callgenotypes step; tab separated txt-file with two columns (no header): sample name and population name. 
+BAMFILES=my240bamfiles.txt								# CUSTOMISE # A txt file with (full path and) names of input bam files, one per line. Bam-files should already have been indexed with samtools index command.
+POPFILE=my240groupfile.txt								# CUSTOMISE # Required for callgenotypes step; tab separated txt-file with two columns (no header): sample name and population name. 
 													# Note: if you run the add read group command, this should not correspond to bam-file name, but to SM-tag in bam-file (specified with addreadgroup-command). 
 													# For example: 'sample1.sorted.bam' could become simply 'sample1' (check the SM tag).
 													# If the names do not correspond, you run into the ERROR: 'Could not parse the file, no matching samples found:'
@@ -97,7 +97,7 @@ POPFILE=mygroupfile.txt								# CUSTOMISE # Required for callgenotypes step; ta
 													# Liu et al. 2022, Comparison of seven SNP calling pipelines for the next-generation sequencing data of chickens
 													# Still, I always use option 1, and while this might result in a higher overall genotyping error rate, at least I need experience any bias: the results always make sense.			
 # GENERAL SETTINGS
-PREFIX=Camelids					# Desired prefix of output files. Should NOT contain a period (.), otherwise the sorting of the subset files will be corrupted. 
+PREFIX=Zoo						# Desired prefix of output files. Should NOT contain a period (.), otherwise the sorting of the subset files will be corrupted. 
 PLOIDY=2                        # Only used if setploidy is set to FALSE (default). Set to 1 for mt-DNA data and Y-chromosomal data, or leave at 2 (default) for autosomal data (assuming diploid organisms).
 setploidy=FALSE                 # Only set to true if you want to define ploidy level dependent on gender of sample (e.g. for Y-chrom or X-chrom). If true, define ploidyfile and samplefile:
 PLOIDYFILE=myploidyfile.txt		# Needed if setploidy=TRUE for callgenotypes step; tab-separated txt-file with 5 columns: chrom, start, end, gender, ploidy
@@ -116,45 +116,45 @@ NRSETS=30				# Number of subdivisions (this is basically the number of commands 
 myregion=mybed2.txt		# CUSTOMISE # After createbed step, specify here the name of a non-empty bed-file. This will be used in subsequent steps to check whether all expected files are present.
 
 # GENOTYPE CALLING:
-runpipeline=FALSE		## Main step, runs all at once: bcftools mpileup, norm , call and filter (mask). Use 'maskdepth' and 'maxsampledepth' to specify masking threshold and maximum number of reads to be considered per sample.  
+runpipeline=TRUE		## Main step, runs all at once: bcftools mpileup, norm , call and filter (mask). Use 'maskdepth' and 'maxsampledepth' to specify masking threshold and maximum number of reads to be considered per sample.  
 maskdepth=5				# By default, genotypes with read depth below 5 are masked.
 maxsampledepth=250		# For mtDNA, set to 100000.	
 combinevcf=FALSE		## Optional, and never needed, as globalfilter-step can also run on vcf file subsets (which is much faster).	
 
 # DEPTH CALCULATIONS:
 calcdepth=FALSE			## Calculate distribution of depths across sites for a subset of genome (use 'bedfile' and 'thinbp2' to specify ). This depth information is needed to set the correct mindepth and maxdepth threshold when running the next step (globalfilter).
-depththinbp=10000		# Specify here the thinning factor.     
+depththinbp=20000		# Specify here the thinning factor.     
 
 # SITE FILTERING:
 globalfilter=FALSE		## Runs either on vcf file subsets or combined vcf file. Use the flags 'removeindels', 'min_alleles', 'mindepth' and 'maxdepth' to customize filter, in case of the latter two using information obtained from the calcdepth step (which can be visualised using BAM2VCF_plotdepth.R script.			
-mindepth=80				# CUSTOMISE. Use BAM2VCF_calcdepth output and BAM2VCF_plotdepth.R scripts to determine the value. Expected value is around 0.6x overall meandepth (e.g: if mean depth per sample is 10, and you have 100 samples, then: 10*100*0.6 = 600). 
-maxdepth=250			# CUSTOMISE. Use BAM2VCF_calcdepth output and BAM2VCF_plotdepth.R scripts to determine the value. Expected value is around 1.5x overall meandepth (e.g: if mean depth per sample is 10, and you have 100 samples, then: 10*100*1.5 = 1500). 
+mindepth=1600			# CUSTOMISE. Use BAM2VCF_calcdepth output and BAM2VCF_plotdepth.R scripts to determine the value. Expected value is around 0.6x overall meandepth (e.g: if mean depth per sample is 10, and you have 100 samples, then: 10*100*0.6 = 600). 
+maxdepth=3600			# CUSTOMISE. Use BAM2VCF_calcdepth output and BAM2VCF_plotdepth.R scripts to determine the value. Expected value is around 1.5x overall meandepth (e.g: if mean depth per sample is 10, and you have 100 samples, then: 10*100*1.5 = 1500). 
 min_alleles=0			# recommendation: if possible keep to zero. Only a min_alleles threshold, if really needed. That is, if certain samples do not behave (deviate from ultrametricity), then set to approximately 1x nrsamples in the case of diploid data. 
 site_quality=0			# recommendation: if possible keep to zero. Only use a site quality filter, if really needed. If certain samples do not behave (deviate from ultrametricity, set to 15, or max 20. Do NOT set higher than 20. This causes a disproportionate loss of monomorphic sites relative to polymorphic sites, and hence biases He, pi and Dxy-estimates. 
-removeindels=TRUE		# this is an option of the globalfilter step. By default set to TRUE. All downstream analyses which I run, require that indels have been removed.    
+removeindels=YES		# this is an option of the globalfilter step. By default set to YES. All downstream analyses which I run, require that indels have been removed.    
+countsites=FALSE		## Count number of sites prior to variant selection
 combinevcf2=FALSE		## Optional, as next step can also run on vcf file subsets. Needed though as input for Darwindow ('PREFIX.globalfilter.vcf.gz').
 
 # THIN DATA (OPTIONAL):
 thinallsites=FALSE		## Runs either on vcf file subsets or combined vcf file.
 thinallbp=100			# Select one site every n basepair (either monomorphic or polymorphic)
 combinethin=FALSE		## Combine thinned file. Not really needed for anything really.
-countsites=FALSE		## Count number of sites prior to variant selection
 
 # SNP SELECTION:
 selectvariants=FALSE	## Runs either on vcf file subsets or combined vcf file. Use the flags 'thinfactor' and 'biallelic' to specify input and output.
 thinfactor=0			# Which thinning factor was used to create the input files? If wanting to extract SNPs from unthinned data, then leave to 0. If from the thinned dataset, define same value as for thinallbp.
-biallelic=FALSE			# Select biallelic sites only? By default set to TRUE, to allow downstream analyses with SambaR. But, set to FALSE to generate input for VCF_calcdist.sh.
+biallelic=NO			# Select biallelic sites only? Set to YES if generating input for SambaR. Set to NO if generating input for VCF_calcdist.sh.
 combinevcf3=FALSE		## Combine subset vcf files with snps. But faster option is to run missfilter on subset vcf files and combine with combinevcf4 step. 
 						# Final output for mtDNA and Y-chromosomal data. Use this file as input for VCF_haploid2diploid.
 						# For autosomal data, use this file as input for VCF_calcdist calculations, as well as input for easySFS. (But make sure to know the total number of sites of the vcf-file prior to selecting variants.)	
 
 # SNP FILTERING (OPTIONAL):
 missfilter=FALSE		## Use minalleles flag (next line) to set missfilter. This is a repetition of min_alleles flag in globalfilter step. 
-minalleles=32			# recommendation: in the range of 1.6 - 1.95 * nrsamples in case of diploid data, and in the range of 0.8 - 0.975 * nrsamples in case of haploid data.   
+minalleles=0			# recommendation: in the range of 1.6 - 1.95 * nrsamples in case of diploid data, and in the range of 0.8 - 0.975 * nrsamples in case of haploid data.   
 combinevcf4=FALSE		## Combine subset vcf files with filtered snps.	
 
 # SNP THINNING (OPTIONAL):
-THININPUT=${PREFIX}.mysnps.thin${thinfactor}.missfilter.vcf.gz		# Specify input vcf-file for snp thinning. Either output of combinevcf3 or combinevcf4. 
+THININPUT=${PREFIX}.mysnps.thin${thinfactor}.vcf.gz			# Specify input vcf-file for snp thinning. Either output of combinevcf3 or combinevcf4. 
 thinsnps=FALSE			## Use the 'thinsnpsbp' flag (next line) to adjust the thinning parameter (i.e. minimum distance between snps in bp). Default is 1 SNP per 50Kb
 thinsnpbp=50000			#
 
@@ -321,7 +321,7 @@ if [[ "$globalfilter" = TRUE ]]
 		for mybedfile in mybed*.txt
 			do
 			echo ${mybedfile}
-			if [[ "$removeindels" = TRUE ]]
+			if [[ "$removeindels" = YES ]]
 				then
 				echo "Also removing indels..."
 				$BCFTOOLS view --threads 3 -i "INFO/DP>=${mindepth} && INFO/DP<=${maxdepth} && AN>=${min_alleles} && QUAL>=${site_quality}" masked_${PREFIX}.${mybedfile}.vcf.gz -O z -o ${PREFIX}.globalfilter.thin0.${mybedfile}.vcf.gz --exclude-types indels &
@@ -336,7 +336,7 @@ if [[ "$globalfilter" = TRUE ]]
 		if [ -f ${PREFIX}.masked.vcf.gz ];
 			then
 			echo "Running analysis for combined vcf file."
-			if [[ "$removeindels" = TRUE ]]
+			if [[ "$removeindels" = YES ]]
 				then
 				$BCFTOOLS view --threads 3 -i "INFO/DP>=${mindepth} && INFO/DP<=${maxdepth} && AN>=${min_alleles} && QUAL>=${site_quality}" ${PREFIX}.masked.vcf.gz -O z -o ${PREFIX}.globalfilter.thin0.vcf.gz --exclude-types indels
 				else
@@ -349,6 +349,18 @@ if [[ "$globalfilter" = TRUE ]]
 		fi
 	fi
 fi  
+
+if [[ "$countsites" = TRUE ]]
+	then
+	for myfile in ${PREFIX}.globalfilter.thin${thinallbp}.mybed*txt.vcf.gz
+        do
+        ls $myfile
+        ${BCFTOOLS} stats $myfile > ${myfile}.stats.txt &
+        done
+	wait
+	echo "Calculating total sum..."
+	grep 'number of records:' ${PREFIX}.globalfilter.thin${thinallbp}.mybed*txt.vcf.gz.stats.txt | cut -f4 | awk '{total += $1}END{print total}'
+fi
 
 # Optional step (not strictly needed as next step can also run on subset vcf files.)
 # However, needed as input for Darwindow (genome-wide heterozygosity) and also for VCF_calcdist.sh script. 
@@ -408,18 +420,6 @@ if [[ "$combinethin" = TRUE ]]
 	fi
 fi
 
-if [[ "$countsites" = TRUE ]]
-	then
-	for myfile in ${PREFIX}.globalfilter.thin${thinallbp}.mybed*txt.vcf.gz
-        do
-        ls $myfile
-        ${BCFTOOLS} stats $myfile > ${myfile}.stats.txt &
-        done
-	wait
-	echo "Calculating total sum..."
-	grep 'number of records:' ${PREFIX}.globalfilter.thin${thinallbp}.mybed*txt.vcf.gz.stats.txt | cut -f4 | awk '{total += $1}END{print total}'
-fi
-
 if [[ "$selectvariants" = TRUE ]]
 	then
 	echo "Selecting polymorphic sites..."
@@ -430,7 +430,7 @@ if [[ "$selectvariants" = TRUE ]]
 		for mybedfile in mybed*.txt
 			do
 			echo ${mybedfile}
-			if [[ "$biallelic" = TRUE ]]
+			if [[ "$biallelic" = YES ]]
 				then
 				echo "Selecting biallelic sites only (default setting)..."	
 				$BCFTOOLS view --threads 3 --exclude-types indels -O z ${PREFIX}.globalfilter.thin${thinfactor}.${mybedfile}.vcf.gz -o ${PREFIX}.mysnps.thin${thinfactor}.${mybedfile}.vcf.gz --min-alleles 2 --max-alleles 2 &
@@ -446,7 +446,7 @@ if [[ "$selectvariants" = TRUE ]]
 		if [ -f ${PREFIX}.allsites.globalfilter.thin${thinfactor}.vcf.gz ];
 			then
 			echo "Selecting biallelic SNPs from combined vcf file."		
-			if [[ "$biallelic" = TRUE ]]
+			if [[ "$biallelic" = YES ]]
 				then
 				echo "Selecting biallelic sites only (default setting)..."	
 				$BCFTOOLS view --threads 10 --exclude-types indels -O z ${PREFIX}.allsites.globalfilter.thin${thinfactor}.vcf.gz -o ${PREFIX}.mysnps.thin${thinfactor}.vcf.gz --min-alleles 2 --max-alleles 2 
