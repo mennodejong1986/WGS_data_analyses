@@ -30,12 +30,13 @@
 # 2. afterwards run the actual analysis (convertdata=FALSE,run_loop=TRUE)
 
 # PARALLEL USAGE
-# To speed up the calculations, run simulatenously for subsets as such:
+# To speed up the calculations, step 2 can be ran simulatenously for subsets as such:
 # ./VCF_calcdist.sh 1 10 &		
 # ./VCF_calcdist.sh 11 20 &
-# IMPORTANT!! If running simulatenously, the flag convertdata should be set to FALSE, and the output files of the data conversion step should already be present.
+# IMPORTANT!! If running simulatenously, the flag convertdata should be set to FALSE, the flag run_loop to TRUE.
+# Furthermore, the output files of the data conversion step should already be present (so you should already have ran the first step). 
 
-# The script automatically avoids double calculations (i.e, i vs j, and j vs i) by only performing calculations if ( i < j && (i + j)%%2!=0) or ( i > j && (i + j)%%2==0)
+# The script automatically avoids redundant calculations (i.e, i vs j, and j vs i) by only performing calculations if ( i < j && (i + j)%%2!=0) or ( i > j && (i + j)%%2==0)
 # For instance, for individuals 1 and 5, the sum is even (6), and hence the script performs calculations for i=5 and j=1, but not for i=1 and j=5.
 # In contrast, for individuals 1 and 6, the sum is odd (7), and hence the script performs calculations for i=1 and j=6, but not for i=6 and j=1.     
 
@@ -46,7 +47,7 @@ start1=$1       		# Specify this number on the command line.
 end1=$2         		# Specify this number on the command line.
 
 start2=1
-end2=270        		# Set this number to the total of individuals in the input vcf-file.
+end2=50        			# Set this number to the total of individuals in the input vcf-file.
 
 convertdata=TRUE		# This step will create the intermediate files 'myinput.samples.txt', 'myinput.samples.txt' and 'myinput.pos.txt'
 replacebar=FALSE		# If data is phased (meaning alleles are separated by a vertical bar rather than forward slash), set this is TRUE when running convertdata step
@@ -63,14 +64,19 @@ BCFTOOLS=/home/mdejong/software/bcftools/bcftools-1.20/bcftools		# specify here 
 
 if [[ "$convertdata" == TRUE ]]
 	then
-	echo "Converting vcf to geno..."
-	$BCFTOOLS query --list-samples $MYVCF > myinput.samples.txt
-	$BCFTOOLS query -f '[\t%GT]\n' $MYVCF | sed 's/^[ \t]*//' > myinput.geno.txt
-	zgrep -v '#' $MYVCF | head -1 | cut -f1-2 > myinput.pos.txt
-	#
-	if [[ "$replacebar" == TRUE ]]
+	if [ -f myinput.geno.txt ]
 		then
-		sed -i 's:|:/:g' myinput.geno.txt
+		echo "ERROR: The file 'myinput.geno.txt' is already. If you really want to recreate this file, first delete the existing file."
+		else
+		echo "Converting vcf to geno..."
+		$BCFTOOLS query --list-samples $MYVCF > myinput.samples.txt
+		$BCFTOOLS query -f '[\t%GT]\n' $MYVCF | sed 's/^[ \t]*//' > myinput.geno.txt
+		zgrep -v '#' $MYVCF | head -1 | cut -f1-2 > myinput.pos.txt
+		#
+		if [[ "$replacebar" == TRUE ]]
+			then
+			sed -i 's:|:/:g' myinput.geno.txt
+		fi
 	fi
 	else
 	echo "Assuming input files 'myinput.geno.txt' and 'myinput.samples.txt' are already present."
@@ -78,6 +84,15 @@ fi
 
 if [[ "$run_loop" == TRUE ]]
 	then
+	
+	# Check number of arguments
+	if [ "$#" -lt 2 ] 
+		then
+		echo "ERROR: missing required arguments!" >&2
+		echo "Usage: VCF_calcdist <startnr> <endnr>" >&2
+		exit 1	
+	fi
+	
 	mychrom=$(cut -f1 myinput.pos.txt)
 	mypos=$(cut -f2 myinput.pos.txt)
 	nsites=$(wc -l myinput.geno.txt | cut -f1 -d ' ')
