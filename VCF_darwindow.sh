@@ -70,7 +70,6 @@
 
 
 
-
 ###########################
 ###### CONTROL PANEL ######
 
@@ -82,6 +81,7 @@ ADMIXTEST=/path/to/software/VCF_3poptest_admixtools.sh			# Not needed, unless ad
 
 # input files:
 MYVCF=/path/to/inputfile/mydata.allsites.globalfilter.vcf.gz	# Input file should be compressed using bcftools view -O z (so: NOT with gzip, because this won't be accepted by tabix). 
+																# zcat mydata.allsites.globalfilter.vcf.gz | bcftools view -O z -o mydata.allsites.globalfilter.vcf.bgz
 POPFILE=mymainpopfile.txt										# Only needed if flag 'pop_scores' is set to TRUE. Not needed for heterozygosity analyses 
 
 # settings:
@@ -93,12 +93,12 @@ annotated=FALSE
 haploiddata=FALSE						# Set to TRUE in case of haploid data. Only useful to count alternative sites (because no heterozygous sites present anyway).
 
 # preparatory steps:
-do_index=FALSE							# index input vcf file (output file will have the suffix .tbi)
-extract_contiginfo=FALSE
-extract_samples=FALSE
+do_index=FALSE							## index input vcf file (output file will have the suffix .tbi)
+extract_contiginfo=FALSE				## be aware: set sample_scores to TRUE if intending to run Run of Homozygosity analyses, otherwise the headers of the output files will be incomplete 
+extract_samples=FALSE					##
 
 # actual analyses:
-run_loop=FALSE							# only set to TRUE after having run the three preparatory steps
+run_loop=FALSE							## only set to TRUE after having run the three preparatory steps
 sample_scores=TRUE						# sliding window heterozygosity (needed for ROH-analyses)
 pop_scores=FALSE
 poppair_scores=FALSE
