@@ -13,6 +13,15 @@
 # make
 # make install
 
+# IF NEED, INSTALL THE LATEST VERSION OF BWA:
+# FROM: https://github.com/lh3/bwa
+# git clone https://github.com/lh3/bwa.git
+# cd bwa; make
+
+# OR USE BWA MEM2, WHICH PRODUCES IDENTICAL OUTCOME, BUT IS 1.3-3.1x FASTER:
+# FROM: https://github.com/bwa-mem2/bwa-mem2
+# curl -L https://github.com/bwa-mem2/bwa-mem2/releases/download/v2.3/bwa-mem2-2.3_x64-linux.tar.bz2 | tar jxf -
+# No need to compile
 
 
 #######################
@@ -38,13 +47,14 @@ NRCORES=8						# Number of cores or threads per file. For example: if working on
 indexref=FALSE					# step 0. index reference
 extractbn=TRUE					# step 0. extract base names of input files
 mapdata=FALSE					# step 1. map with bwa and sort with samtools
-paireddata=TRUE					# step 1. if unpaired, set to FALSE  
+paireddata=NO					# step 1. if unpaired, set to FALSE  
 getstats=FALSE					# step 2. get mapping statistics
 indexbam=FALSE					# step 3. index bam files
 addRG=FALSE						# step 4. add readgroups	
 removedup=FALSE					# step 5: remove duplicates with PICARD markduplicates
 filterbam=FALSE					# step 6: filter on mapping quality and alignment score
 indexbam2=FALSE					# step 7: index filtered bam files
+								### IMPORTANT!!!! If working with 100bp reads (rather than 150 bp reads), set the AS threshold to 70 rather than 100
 
 qualitycontrol=FALSE			# step 8: quality control (optional)
 removerepeats=FALSE				# step 9: remove reads which mapped to a repetitive region (optional)
@@ -123,17 +133,18 @@ if [[ "$mapdata" = TRUE ]]
 	for bn in $(cat allsamples.bn.txt)
 		do
 		echo $bn
-		if [[ "$paireddata" = TRUE ]]
+		if [[ "$paireddata" = YES ]]
 			then
-			$BWA mem $REFERENCE ${INPUTDIR}/${bn}_1.fq.gz ${INPUTDIR}/${bn}_2.fq.gz -t $NRCORES | ${SAMTOOLS} sort --threads 3 -l 9 -m 2048M -o ${OUTPUTDIR}/${bn}.sorted.bam &
+			$BWA mem $REFERENCE ${INPUTDIR}/${bn}_1.fq.gz ${INPUTDIR}/${bn}_2.fq.gz -t $NRCORES -K 1000000 | ${SAMTOOLS} sort --threads 3 -l 9 -m 2048M -o ${OUTPUTDIR}/${bn}.sorted.bam &
 			else
-			$BWA mem $REFERENCE ${INPUTDIR}/${bn}_1.fq.gz -t $NRCORES | ${SAMTOOLS} sort --threads $NRCORES -l 9 -m 2048M -o ${OUTPUTDIR}/${bn}.sorted.bam &
+			$BWA mem $REFERENCE ${INPUTDIR}/${bn}_1.fq.gz -t $NRCORES -K 1000000 | ${SAMTOOLS} sort --threads $NRCORES -l 9 -m 2048M -o ${OUTPUTDIR}/${bn}.sorted.bam &
 		fi
 		# Note: I don't filter out unmapped reads yet (samtools view -F4), otherwise not possible to determine mapping rates. Instead, unmapped reads are removed during the final filter step.
 		# However, if mapping against mitochondrial genome, then you should remove unmapped reads, in order to keep the bam-files small:
 		# bwa mem $REFERENCE ${INPUTDIR}/${bn}_1.fq.gz ${INPUTDIR}/${bn}_2.fq.gz -t $NRCORES | samtools view -bhq 20 -F4 -f0x2 -t 2 | samtools sort -o ${OUTPUTDIR}/${bn}.sorted.bam &
 		#
 		# To speed up, optionally use bwa-mem2 -K 1000000
+		# -K: process INT input bases in each batch regardless of nThreads (be aware to not overload ram memory)
 		# -M: set shorter split reads as secondary. Might be better to include, but since I did not do it for most deer and bear samples, for consistency I will not include this option.  
 		# By default, BWA-MEM uses soft clipping for the primary alignment and hard clipping for supplementary alignments. If you specify the -Y option, also soft clipping for supplementary alignments.
 		# soft-clipped: bases in 5' and 3' of the read are NOT part of the alignment.
@@ -145,7 +156,8 @@ if [[ "$mapdata" = TRUE ]]
 		#
 		# for sorting: 
 		# -l 9:		maximum compression level. Default is 4 or 5. Trade-off between compression rate and compression time. 
-		# -m 2048M:	maximum RAM memory per thread. So if using in total 3 samples with 10 threads each, then total RAM usage will be 3*10*2048. Default is 768M.
+		# -m 2048M:	maximum RAM memory per thread. So if using in total 3 samples with 10 threads each, then total RAM usage will be 3*10*2048. Default is 768M. Higher values decrease computation time.
+		# By default, samtools sort tries to select a format based on the -o filename extension; if output is to standard output or no format can be deduced, bam is selected.
 		#
 		# To add reads groups at this step already, rather than at a later step, add:
 		# -R @RG\tID:samplename\tSM:samplename\tPL:illumina\tLB:samplename
@@ -233,6 +245,7 @@ if [[ "$filterbam" = TRUE ]]
 	# f 0x2:	keep properly paired reads only
 	# F4:		remove unmapped read
 	# [AS]>=100 keep only reads with an alignment score of 100 or higher.
+	#			This is assumed 150bp reads. If working with 100bp reads, set the threshold to 70
     #           Alignment score is calculated as follows: a match is 1, a mismatch is -4, a gap opening is -6, and a gap extension is -1.
     #           Also note that alignment score considers base qualities (if I am not mistaken).
     #           So you also can get a penalty if base quality score is below 13 (default value), meaning:  !"#$%&'()*+,-. (although not sure about the period)
@@ -240,7 +253,7 @@ if [[ "$filterbam" = TRUE ]]
 	for bn in $(cat allsamples.bn.txt)
 		do
 		echo $bn
-		if [[ "$paireddata" = TRUE ]]
+		if [[ "$paireddata" = YES ]]
 			then
 			${SAMTOOLS} view -@ $NRCORES -bhq 20 -f 0x2 -F4 -e '[AS]>=100' ${OUTPUTDIR}/${bn}.sorted.RG.dupremoved.bam > ${OUTPUTDIR}/${bn}.sorted.RG.dupremoved.filtered.bam &
 			else
